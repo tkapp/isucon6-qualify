@@ -94,7 +94,7 @@ public class Isuda {
 				"SELECT * FROM entry ORDER BY updated_at DESC LIMIT ? OFFSET ?", PER_PAGE, (page - 1) * PER_PAGE);
 
 		for (Map<String, Object> entry : entries) {
-			entry.put("html", htmlify(entry.get("description").toString(), request));
+			entry.put("html", htmlify(entry.get("keyword").toString(), entry.get("description").toString(), request));
 			entry.put("stars", loadStars(entry.get("keyword").toString(), request));
 		}
 
@@ -254,7 +254,7 @@ public class Isuda {
 			return "";
 		}
 
-		entry.put("html", htmlify(entry.get("description").toString(), request));
+		entry.put("html", htmlify(entry.get("keyword").toString(), entry.get("description").toString(), request));
 		entry.put("stars", loadStars(entry.get("keyword").toString(), request));
 
 		Map<String, Object> model = new HashMap<>();
@@ -335,13 +335,13 @@ public class Isuda {
 		return true;
 	}
 
-	synchronized private static String htmlify(String content, Request request) throws SQLException {
+	synchronized private static String htmlify(String keyword, String content, Request request) throws SQLException {
 
 		if (content == null || "".equals(content)) {
 			return "";
 		}
 
-		String result = content;
+		String result = Cache.getContent(keyword);
 
 		Map<String, String> kw2link = new HashMap<>();
 		List<String> existsKeywords = new ArrayList<String>();
@@ -362,6 +362,8 @@ public class Isuda {
 		});
 
 		result = StringUtils.replace(result, "\n", "<br />");
+
+		Cache.setContent(keyword, result);
 
 		return result;
 

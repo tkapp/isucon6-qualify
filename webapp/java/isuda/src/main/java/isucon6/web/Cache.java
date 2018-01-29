@@ -13,6 +13,8 @@ public class Cache {
 
 	public static Map<String, Entry> entries = new HashMap<>();
 
+	private static Map<String, String> contents = new HashMap<>();
+
 	public static void init(Connection connection) throws SQLException {
 
 		List<Map<String, Object>> entries = DBUtils.select(connection,
@@ -21,6 +23,8 @@ public class Cache {
 		for (Map<String, Object> kv : entries) {
 			addKeyword(kv.get("keyword").toString());
 		}
+
+		contents = new HashMap<>();
 	}
 
 	public static boolean addKeyword(String keyword) {
@@ -48,6 +52,9 @@ public class Cache {
 		e.setKeyword(keyword);
 		entries.put(keyword, e);
 
+
+		contents = new HashMap<>();
+
 		return true;
 	}
 
@@ -57,5 +64,15 @@ public class Cache {
 
 	public static void removeKeyword(String keyword) {
 		keywords.remove(keyword);
+
+		contents = new HashMap<>();
+	}
+
+	public static String getContent(String keyword) {
+		return contents.get(keyword);
+	}
+
+	public static void setContent(String keyword, String content) {
+		contents.put(keyword, content);
 	}
 }
