@@ -13,11 +13,66 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+
 import spark.Request;
 
 public class DBUtils {
 
+	private static HikariDataSource ds;
+
+	static {
+
+		String url = "jdbc:mysql://" + Config.host + ":" + Config.port + "/" + Config.db
+				+ "?useUnicode=true&characterEncoding=" + Config.charset;
+
+		HikariConfig config = new HikariConfig();
+		config.setJdbcUrl(url);
+		config.setUsername(Config.user);
+		config.setPassword(Config.password);
+		config.addDataSourceProperty("cachePrepStmts", "true");
+		config.addDataSourceProperty("prepStmtCacheSize", "250");
+		config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+		config.setMinimumIdle(60);
+		config.setMaximumPoolSize(60);
+		config.setAutoCommit(false);
+
+		ds = new HikariDataSource(config);
+	}
+
 	public static Connection getConnection(Request request) {
+
+		if (request.attribute("connection") != null) {
+			return request.attribute("connection");
+		}
+
+		try {
+
+			Connection connection = ds.getConnection();
+
+			try (Statement statement = connection.createStatement()) {
+				//
+				statement.execute("SET SESSION sql_mode='TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY'");
+				statement.execute("SET NAMES utf8mb4");
+				statement.execute("begin");
+			}
+
+			request.attribute("connection", connection);
+
+			return connection;
+
+		} catch (SQLException e) {
+			//
+			throw new RuntimeException("SystemException", e);
+		}
+	}
+
+	public static Connection getConnection() throws SQLException {
+		return ds.getConnection();
+	}
+
+	public static Connection getConnection2(Request request) {
 
 		if (request.attribute("connection") != null) {
 			return request.attribute("connection");

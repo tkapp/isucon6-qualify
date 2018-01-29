@@ -50,19 +50,20 @@ public class Isuda {
 		get("/stars", getStars);
 		post("/stars", postStars);
 
-		after("*", (request, response) -> {
-			Connection connection = (Connection) request.attribute("connection");
-			connection.commit();
-			connection.close();
-		});
-
 		exception(Exception.class, (exception, request, response) -> {
 
 			try {
 				exception.printStackTrace();
 				Connection connection = (Connection) request.attribute("connection");
-				exception.printStackTrace();
 				connection.rollback();
+			} catch (SQLException e) {
+				throw new RuntimeException("SystemException", e);
+			}
+		});
+
+		afterAfter((request, response) -> {
+			try {
+				Connection connection = (Connection) request.attribute("connection");
 				connection.close();
 			} catch (SQLException e) {
 				throw new RuntimeException("SystemException", e);
@@ -147,6 +148,8 @@ public class Isuda {
 
 //		System.out.println("create -> " + keyword);
 
+		connection.commit();
+
 		response.redirect("/");
 		return null;
 	};
@@ -175,6 +178,8 @@ public class Isuda {
 		Connection connection = DBUtils.getConnection(request);
 		String userId = register(connection, name, password);
 		request.session().attribute("userId", userId);
+
+		connection.commit();
 
 		response.redirect("/");
 		return null;
@@ -287,6 +292,8 @@ public class Isuda {
 
 		Cache.removeKeyword(keyword);
 
+		connection.commit();
+
 		response.redirect("/");
 		return null;
 	};
@@ -323,6 +330,8 @@ public class Isuda {
 				keyword, user);
 
 		Cache.addStar(keyword, user);
+
+		connection.commit();
 
 		response.type("text/json");
 		return "{result: \"ok\"}";
