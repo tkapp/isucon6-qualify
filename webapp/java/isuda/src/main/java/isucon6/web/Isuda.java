@@ -3,17 +3,12 @@ package isucon6.web;
 import static spark.Spark.*;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.RandomStringUtils;
@@ -80,6 +75,8 @@ public class Isuda {
 		DBUtils.execute(connection, "DELETE FROM entry WHERE id > 7101");
 		Utils.httpGet(Config.isutarOrigin + "/initialize");
 
+		Cache.init(connection);
+
 		return "ok";
 	};
 
@@ -91,7 +88,7 @@ public class Isuda {
 		int page = (request.queryParams("page") == null) ? 1 : Integer.parseInt(request.queryParams("page"));
 
 		Connection connection = DBUtils.getConnection(request);
-		List<Map<String, Object>> entries = select(connection,
+		List<Map<String, Object>> entries = DBUtils.select(connection,
 				"SELECT * FROM entry ORDER BY updated_at DESC LIMIT ? OFFSET ?", PER_PAGE, (page - 1) * PER_PAGE);
 
 		for (Map<String, Object> entry : entries) {
@@ -143,6 +140,8 @@ public class Isuda {
 						+ " VALUES (?,?,?,NOW(), NOW()) " + " ON DUPLICATE KEY UPDATE "
 						+ " author_id = ?, keyword = ?, description = ?, updated_at = NOW() ",
 				userId, keyword, description, userId, keyword, description);
+
+		Cache.addKeyword(keyword);
 
 		response.redirect("/");
 		return null;
@@ -280,6 +279,8 @@ public class Isuda {
 
 		DBUtils.execute(connection, "DELETE FROM entry WHERE keyword = ?", keyword);
 
+		Cache.removeKeyword(keyword);
+
 		response.redirect("/");
 		return null;
 	};
@@ -293,32 +294,6 @@ public class Isuda {
 		return true;
 	}
 
-	private static List<Map<String, Object>> select(Connection connection, String sql, Object... params)
-			throws SQLException {
-		//
-		try (PreparedStatement statement = connection.prepareStatement(sql)) {
-
-			DBUtils.setParams(statement, params);
-
-			try (ResultSet rs = statement.executeQuery()) {
-
-				ResultSetMetaData metaData = rs.getMetaData();
-				int columnCount = metaData.getColumnCount();
-
-				List<Map<String, Object>> result = new ArrayList<>();
-
-				while (rs.next()) {
-
-					Map<String, Object> item = DBUtils.convertToMap(rs, metaData, columnCount);
-
-					result.add(item);
-				}
-
-				return result;
-			}
-		}
-	}
-
 	private static String htmlify(String content, Request request) throws SQLException {
 
 		if (content == null || "".equals(content)) {
@@ -327,17 +302,9 @@ public class Isuda {
 
 		String result = content;
 
-		Connection connection = DBUtils.getConnection(request);
-
 		Map<String, String> kw2sha = new HashMap<>();
 
-		List<Map<String, Object>> keywords = select(connection,
-				"SELECT keyword FROM entry ORDER BY CHARACTER_LENGTH(keyword) DESC");
-
-		String regex = String.format("(%s)", keywords.stream().map(k -> Pattern.quote(k.get("keyword").toString()))
-				.collect(Collectors.joining("|")));
-
-		Pattern re = Pattern.compile(regex.toString());
+		Pattern re = Cache.getPattern();
 
 		Matcher m = re.matcher(content);
 

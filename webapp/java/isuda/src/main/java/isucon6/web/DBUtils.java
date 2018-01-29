@@ -8,7 +8,9 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import spark.Request;
@@ -51,6 +53,32 @@ public class DBUtils {
 		} catch (ClassNotFoundException | SQLException e) {
 			//
 			throw new RuntimeException("SystemException", e);
+		}
+	}
+
+	public static List<Map<String, Object>> select(Connection connection, String sql, Object... params)
+			throws SQLException {
+		//
+		try (PreparedStatement statement = connection.prepareStatement(sql)) {
+
+			DBUtils.setParams(statement, params);
+
+			try (ResultSet rs = statement.executeQuery()) {
+
+				ResultSetMetaData metaData = rs.getMetaData();
+				int columnCount = metaData.getColumnCount();
+
+				List<Map<String, Object>> result = new ArrayList<>();
+
+				while (rs.next()) {
+
+					Map<String, Object> item = DBUtils.convertToMap(rs, metaData, columnCount);
+
+					result.add(item);
+				}
+
+				return result;
+			}
 		}
 	}
 
