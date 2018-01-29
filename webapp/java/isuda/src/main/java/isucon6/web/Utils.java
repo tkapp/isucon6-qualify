@@ -15,7 +15,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.apache.commons.lang3.StringUtils;
+
 public class Utils {
+
+	private static Map<String, String> escapeMap;
+
+	static {
+		escapeMap = new HashMap<>();
+		escapeMap.put("&", "&amp;");
+		escapeMap.put("\"", "&quot;");
+		escapeMap.put("<", "&lt;");
+		escapeMap.put(">", "&gt;");
+		escapeMap.put("'", "&#x27;");
+	}
 
 	public static Map<String, String> httpPost(String urlString, String data) {
 
@@ -86,9 +99,15 @@ public class Utils {
 		}
 	}
 
-	public static String escapeHtml(String value) {
-		return value.replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;").replace(">", "&gt;")
-				.replace("'", "&#x27;");
+	public static String escapeHtml(final String value) {
+
+		String result = value;
+
+		for (Map.Entry<String, String> kv : escapeMap.entrySet()) {
+			result = StringUtils.replace(result, kv.getKey(), kv.getValue());
+		}
+
+		return result;
 	}
 
 	public static String urlEncode(String value) {
@@ -140,5 +159,9 @@ public class Utils {
 			result.replace(minPos, minPos + keyword.length(), replacement);
 			currentPos = minPos + replacement.length();
 		}
+	}
+
+	public static String createHash(String kw) {
+		return "i_" + Utils.getSha1Digest(kw);
 	}
 }

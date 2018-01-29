@@ -4,6 +4,7 @@ import static spark.Spark.*;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -144,6 +145,8 @@ public class Isuda {
 
 		Cache.addKeyword(keyword);
 
+		System.out.println("create -> " + keyword);
+
 		response.redirect("/");
 		return null;
 	};
@@ -232,9 +235,10 @@ public class Isuda {
 
 	public static Route getKeyword = (request, response) -> {
 
-		setName(request);
-
 		String keyword = request.params("keyword");
+		System.out.println("get -> " + keyword);
+
+		setName(request);
 
 		if (keyword == null || "".equals(keyword)) {
 			response.status(400);
@@ -245,6 +249,7 @@ public class Isuda {
 		Map<String, Object> entry = getKeyword(keyword, connection);
 
 		if (entry == null) {
+			System.out.println("get 404 -> " + keyword);
 			response.status(404);
 			return "";
 		}
@@ -338,27 +343,25 @@ public class Isuda {
 
 		String result = content;
 
-		Map<String, String> kw2sha = new HashMap<>();
+		Map<String, String> kw2link = new HashMap<>();
+		List<String> existsKeywords = new ArrayList<String>();
 
 		List<String> keywords = Cache.getKeywords();
 
 		result = Utils.replaceEach(content, keywords, (kw) -> {
-			String hash = "isuda_" + Utils.getSha1Digest(kw);
-			kw2sha.put(kw, hash);
-			return hash;
+			Entry entry = Cache.entries.get(kw);
+			existsKeywords.add(entry.hash);
+			kw2link.put(entry.hash, entry.link);
+			return entry.hash;
 		});
 
 		result = Utils.escapeHtml(result);
 
-		for (Map.Entry<String, String> kw : kw2sha.entrySet()) {
+		result = Utils.replaceEach(result, existsKeywords, (hash) -> {
+			return kw2link.get(hash);
+		});
 
-			String url = "/keyword/" + Utils.urlEncode(kw.getKey());
-			String link = String.format("<a href=\"%s\">%s</a>", url, Utils.escapeHtml(kw.getKey()));
-
-			result = result.replace(kw.getValue(), link);
-		}
-
-		result = result.replaceAll("\n", "<br />");
+		result = StringUtils.replace(result, "\n", "<br />");
 
 		return result;
 
