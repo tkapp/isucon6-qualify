@@ -10,8 +10,11 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 public class Utils {
 
@@ -138,4 +141,41 @@ public class Utils {
 		}
 	}
 
+	public static String replaceEach(final String text, final List<String> searchList, Function<String, String> replace) {
+
+		StringBuilder result = new StringBuilder(text);
+		int currentPos = 0;
+		List<String> nextSearchList = searchList;
+
+		while (true) {
+
+			int minPos = -1;
+			String keyword = null;
+
+			List<String> currenetSearchList = nextSearchList;
+			nextSearchList = new ArrayList<>();
+
+ 			for (int i = 0; i < currenetSearchList.size(); i++) {
+
+				int pos = result.indexOf(currenetSearchList.get(i), currentPos);
+
+				if (pos == -1) {
+					continue;
+				} else if (minPos == -1 || minPos > pos) {
+					minPos = pos;
+					keyword = currenetSearchList.get(i);
+				}
+
+				nextSearchList.add(currenetSearchList.get(i));
+			}
+
+			if (minPos == -1) {
+				return result.toString();
+			}
+
+			String replacement = replace.apply(keyword);
+			result.replace(minPos, minPos + keyword.length(), replacement);
+			currentPos = minPos + replacement.length();
+		}
+	}
 }

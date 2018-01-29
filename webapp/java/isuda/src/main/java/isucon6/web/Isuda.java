@@ -7,8 +7,6 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.RandomStringUtils;
@@ -58,6 +56,7 @@ public class Isuda {
 		exception(Exception.class, (exception, request, response) -> {
 
 			try {
+				exception.printStackTrace();
 				Connection connection = (Connection) request.attribute("connection");
 				exception.printStackTrace();
 				connection.rollback();
@@ -294,7 +293,7 @@ public class Isuda {
 		return true;
 	}
 
-	private static String htmlify(String content, Request request) throws SQLException {
+	synchronized private static String htmlify(String content, Request request) throws SQLException {
 
 		if (content == null || "".equals(content)) {
 			return "";
@@ -304,23 +303,13 @@ public class Isuda {
 
 		Map<String, String> kw2sha = new HashMap<>();
 
-		Pattern re = Cache.getPattern();
+		List<String> keywords = Cache.getKeywords();
 
-		Matcher m = re.matcher(content);
-
-		StringBuffer sb = new StringBuffer();
-		while (m.find()) {
-
-			String k = m.group();
-			String hash = "isuda_" + Utils.getSha1Digest(k);
-
-			m.appendReplacement(sb, hash);
-
-			kw2sha.put(k, hash);
-		}
-		m.appendTail(sb);
-
-		result = sb.toString();
+		result = Utils.replaceEach(content, keywords, (kw) -> {
+			String hash = "isuda_" + Utils.getSha1Digest(kw);
+			kw2sha.put(kw, hash);
+			return hash;
+		});
 
 		result = Utils.escapeHtml(result);
 
