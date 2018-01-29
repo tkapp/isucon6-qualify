@@ -345,6 +345,12 @@ public class Isuda {
 
 		String result = Cache.getContent(keyword);
 
+		if (result != null) {
+			return result;
+		}
+
+		result = content;
+
 		Map<String, String> kw2link = new HashMap<>();
 		List<String> existsKeywords = new ArrayList<String>();
 

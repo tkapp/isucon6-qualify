@@ -46,6 +46,9 @@ public class Cache {
 				Entry e = new Entry();
 				e.setKeyword(keyword);
 				entries.put(keyword, e);
+
+				contents = new HashMap<>();
+
 				return true;
 			}
 		}
@@ -67,7 +70,8 @@ public class Cache {
 
 	public static void removeKeyword(String keyword) {
 		keywords.remove(keyword);
-
+		entries.remove(keyword);
+		stars.remove(keyword);
 		contents = new HashMap<>();
 	}
 
