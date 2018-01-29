@@ -46,6 +46,8 @@ public class Isuda {
 		get("/login", getLogin);
 		post("/login", postLogin);
 		get("/logout", getLogout);
+		get("/stars", getStars);
+		post("/stars", postStars);
 
 		after("*", (request, response) -> {
 			Connection connection = (Connection) request.attribute("connection");
@@ -72,7 +74,7 @@ public class Isuda {
 		Connection connection = DBUtils.getConnection(request);
 
 		DBUtils.execute(connection, "DELETE FROM entry WHERE id > 7101");
-		Utils.httpGet(Config.isutarOrigin + "/initialize");
+		DBUtils.execute(connection, "TRUNCATE isutar.star");
 
 		Cache.init(connection);
 
@@ -92,7 +94,7 @@ public class Isuda {
 
 		for (Map<String, Object> entry : entries) {
 			entry.put("html", htmlify(entry.get("description").toString(), request));
-			entry.put("stars", loadStars(entry.get("keyword").toString()));
+			entry.put("stars", loadStars(entry.get("keyword").toString(), request));
 		}
 
 		int totalEntries = DBUtils.count(connection, "SELECT COUNT(*) AS count FROM entry");
@@ -240,7 +242,7 @@ public class Isuda {
 		}
 
 		Connection connection = DBUtils.getConnection(request);
-		Map<String, Object> entry = DBUtils.selectOne(connection, "SELECT * FROM entry WHERE keyword = ?", keyword);
+		Map<String, Object> entry = getKeyword(keyword, connection);
 
 		if (entry == null) {
 			response.status(404);
@@ -248,7 +250,7 @@ public class Isuda {
 		}
 
 		entry.put("html", htmlify(entry.get("description").toString(), request));
-		entry.put("stars", loadStars(entry.get("keyword").toString()));
+		entry.put("stars", loadStars(entry.get("keyword").toString(), request));
 
 		Map<String, Object> model = new HashMap<>();
 		model.put("entry", entry);
@@ -282,6 +284,41 @@ public class Isuda {
 
 		response.redirect("/");
 		return null;
+	};
+
+	public static Route getStars = (request, response) -> {
+
+		Map<String, Object> result = getStars(request.queryParams("keyword"), request);
+
+		response.type("text/json");
+		return JSON.encode(result);
+	};
+
+	public static Route postStars = (request, response) -> {
+
+		String keyword = request.queryParams("keyword");
+
+		Connection connection = DBUtils.getConnection(request);
+
+		if (StringUtils.isEmpty(keyword)) {
+			keyword = request.params("keyword");
+		}
+
+		Map<String, Object> result = getKeyword(keyword, connection);
+		if (result == null) {
+			halt(404);
+		}
+
+		String user = request.queryParams("user");
+		if (StringUtils.isEmpty(user)) {
+			user = request.params("user");
+		}
+
+		DBUtils.execute(connection, "INSERT INTO isutar.star (keyword, user_name, created_at) VALUES (?, ?, NOW())",
+				keyword, user);
+
+		response.type("text/json");
+		return "{result: \"ok\"}";
 	};
 
 	private static boolean authenticate(Request request) {
@@ -327,12 +364,11 @@ public class Isuda {
 
 	}
 
-	private static Object loadStars(String keyword) {
+	private static Object loadStars(String keyword, Request request) throws SQLException {
 
-		Map<String, String> result = Utils.httpGet(Config.isutarOrigin + "/stars?keyword=" + Utils.urlEncode(keyword));
-		Map<String, Object> json = JSON.decode(result.get("body"));
+		Map<String, Object> stars = getStars(keyword, request);
 
-		return (Object) json.get("stars");
+		return (Object) stars.get("stars");
 
 	}
 
@@ -384,5 +420,23 @@ public class Isuda {
 		} else {
 			request.attribute("userName", "");
 		}
+	}
+
+	private static Map<String, Object> getKeyword(String keyword, Connection connection) throws SQLException {
+		return DBUtils.selectOne(connection, "SELECT * FROM entry WHERE keyword = ?", keyword);
+	}
+
+	private static Map<String, Object> getStars(String keyword, Request request) throws SQLException {
+
+
+		Connection connection = DBUtils.getConnection(request);
+
+		List<Map<String, Object>> stars = DBUtils.select(connection, "SELECT * FROM isutar.star WHERE keyword = ?",
+				keyword);
+
+		Map<String, Object> result = new HashMap<>();
+		result.put("stars", stars);
+
+		return result;
 	}
 }

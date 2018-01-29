@@ -1,7 +1,6 @@
 package isucon6.web;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -17,42 +16,6 @@ import java.util.Map;
 import java.util.function.Function;
 
 public class Utils {
-
-	public static Map<String, String> httpGet(String urlString) {
-
-		Map<String, String> result = new HashMap<>();
-
-		HttpURLConnection con = null;
-
-		try {
-
-			URL url = new URL(urlString);
-
-			con = (HttpURLConnection) url.openConnection();
-			con.setRequestMethod("GET");
-
-			result.put("status", String.valueOf(con.getResponseCode()));
-			if (con.getResponseCode() != HttpURLConnection.HTTP_OK) {
-				//
-				return result;
-			}
-
-			try (BufferedReader reader = new BufferedReader(new InputStreamReader(con.getInputStream(), "UTF-8"))) {
-
-				StringBuilder body = new StringBuilder();
-				while (reader.ready()) {
-					body.append(reader.readLine());
-				}
-
-				result.put("body", body.toString());
-
-				return result;
-			}
-
-		} catch (IOException e) {
-			throw new RuntimeException("SystemException", e);
-		}
-	}
 
 	public static Map<String, String> httpPost(String urlString, String data) {
 
