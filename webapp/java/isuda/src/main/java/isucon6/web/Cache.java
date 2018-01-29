@@ -18,13 +18,14 @@ public class Cache {
 
 		cachePattern = null;
 
-		List<Map<String, Object>> keywords = DBUtils.select(connection,
+		List<Map<String, Object>> entries = DBUtils.select(connection,
 				"SELECT keyword FROM entry ORDER BY CHARACTER_LENGTH(keyword) DESC");
 
-		Cache.keywords = new ArrayList<>();
-		for (Map<String, Object> kv : keywords) {
-			Cache.keywords.add(kv.get("keyword").toString());
+		List<String> keywords = new ArrayList<>();
+		for (Map<String, Object> kv : entries) {
+			keywords.add(kv.get("keyword").toString());
 		}
+		Cache.keywords = keywords;
 	}
 
 	public static boolean addKeyword(String keyword) {
@@ -53,8 +54,10 @@ public class Cache {
 		cachePattern = null;
 		keywords.remove(keyword);
 	}
-	
+
 	public static String getRegex() {
+
+		List<String> keywords = new ArrayList<>(Cache.keywords);
 		String regex = String.format("(%s)",
 				keywords.stream().map(k -> Pattern.quote(k)).collect(Collectors.joining("|")));
 
