@@ -1,0 +1,132 @@
+package isucon6.web;
+
+import java.math.BigInteger;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.HashMap;
+import java.util.Map;
+
+import spark.Request;
+
+public class DBUtils {
+
+	public static Connection getConnection(Request request) {
+
+		if (request.attribute("connection") != null) {
+			return request.attribute("connection");
+		}
+
+		//
+		try {
+			//
+			Class.forName("com.mysql.jdbc.Driver");
+
+			String serverName = Config.host;
+			String port = Config.port;
+			String databaseName = Config.db;
+			String user = Config.user;
+			String password = Config.password;
+
+			String url = "jdbc:mysql://" + serverName + ":" + port + "/" + databaseName
+					+ "?useUnicode=true&characterEncoding=" + Config.charset;
+
+			Connection connection = DriverManager.getConnection(url, user, password);
+			connection.setAutoCommit(false);
+
+			try (Statement statement = connection.createStatement()) {
+				//
+				statement.execute("SET SESSION sql_mode='TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY'");
+				statement.execute("SET NAMES utf8mb4");
+			}
+
+			request.attribute("connection", connection);
+
+			return connection;
+
+		} catch (ClassNotFoundException | SQLException e) {
+			//
+			throw new RuntimeException("SystemException", e);
+		}
+	}
+
+	public static Map<String, Object> selectOne(Connection connection, String sql, Object... params)
+			throws SQLException {
+
+		try (PreparedStatement statement = connection.prepareStatement(sql)) {
+
+			setParams(statement, params);
+
+			try (ResultSet rs = statement.executeQuery()) {
+
+				ResultSetMetaData metaData = rs.getMetaData();
+				int columnCount = metaData.getColumnCount();
+
+				if (rs.next()) {
+
+					Map<String, Object> item = convertToMap(rs, metaData, columnCount);
+					return item;
+
+				} else {
+					return null;
+				}
+			}
+		}
+	}
+
+	public static int count(Connection connection, String sql, Object... params) throws SQLException {
+
+		try (PreparedStatement statement = connection.prepareStatement(sql)) {
+
+			setParams(statement, params);
+
+			try (ResultSet rs = statement.executeQuery()) {
+				rs.next();
+				return rs.getInt(1);
+			}
+		}
+	}
+
+	public static int execute(Connection connection, String sql) throws SQLException {
+		//
+		return execute(connection, sql, new Object[0]);
+	}
+
+	public static int execute(Connection connection, String sql, Object... params) throws SQLException {
+		//
+		try (PreparedStatement statement = connection.prepareStatement(sql)) {
+
+			setParams(statement, params);
+
+			return statement.executeUpdate();
+		}
+	}
+
+	public static void setParams(PreparedStatement statement, Object... params) throws SQLException {
+		//
+		for (int i = 0; i < params.length; i++) {
+			if (params[i] instanceof Integer || params[i].getClass() == int.class) {
+				statement.setInt(i + 1, (Integer) params[i]);
+			} else if (params[i] instanceof BigInteger) {
+				statement.setInt(i + 1, ((BigInteger) params[i]).intValue());
+			} else {
+				statement.setString(i + 1, (String) params[i]);
+			}
+		}
+	}
+
+	public static Map<String, Object> convertToMap(ResultSet rs, ResultSetMetaData metaData, int columnCount)
+			throws SQLException {
+		Map<String, Object> item = new HashMap<>();
+
+		for (int i = 0; i < columnCount; i++) {
+			item.put(metaData.getColumnName(i + 1), rs.getObject(i + 1));
+		}
+		return item;
+	}
+
+}

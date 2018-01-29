@@ -2,25 +2,11 @@ package isucon6.web;
 
 import static spark.Spark.*;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.math.BigInteger;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -52,7 +38,7 @@ public class Isuda {
 		staticFiles.externalLocation("../public");
 
 		before("*", (request, response) -> {
-			Connection connection = getConnection(request);
+			Connection connection = DBUtils.getConnection(request);
 			request.attribute("connection", connection);
 		});
 
@@ -89,10 +75,10 @@ public class Isuda {
 
 	public static Route getInitialize = (request, response) -> {
 
-		Connection connection = getConnection(request);
+		Connection connection = DBUtils.getConnection(request);
 
-		execute(connection, "DELETE FROM entry WHERE id > 7101");
-		httpGet(Config.isutarOrigin + "/initialize");
+		DBUtils.execute(connection, "DELETE FROM entry WHERE id > 7101");
+		Utils.httpGet(Config.isutarOrigin + "/initialize");
 
 		return "ok";
 	};
@@ -104,7 +90,7 @@ public class Isuda {
 		int PER_PAGE = 10;
 		int page = (request.queryParams("page") == null) ? 1 : Integer.parseInt(request.queryParams("page"));
 
-		Connection connection = getConnection(request);
+		Connection connection = DBUtils.getConnection(request);
 		List<Map<String, Object>> entries = select(connection,
 				"SELECT * FROM entry ORDER BY updated_at DESC LIMIT ? OFFSET ?", PER_PAGE, (page - 1) * PER_PAGE);
 
@@ -113,7 +99,7 @@ public class Isuda {
 			entry.put("stars", loadStars(entry.get("keyword").toString()));
 		}
 
-		int totalEntries = count(connection, "SELECT COUNT(*) AS count FROM entry");
+		int totalEntries = DBUtils.count(connection, "SELECT COUNT(*) AS count FROM entry");
 		int lastPage = totalEntries / PER_PAGE;
 
 		int[] pages = IntStream.range(Math.max(1, page - 5), Math.min(lastPage, page + 5)).toArray();
@@ -151,8 +137,8 @@ public class Isuda {
 			halt(400);
 		}
 
-		Connection connection = getConnection(request);
-		execute(connection,
+		Connection connection = DBUtils.getConnection(request);
+		DBUtils.execute(connection,
 				"INSERT INTO entry (author_id, keyword, description, created_at, updated_at)"
 						+ " VALUES (?,?,?,NOW(), NOW()) " + " ON DUPLICATE KEY UPDATE "
 						+ " author_id = ?, keyword = ?, description = ?, updated_at = NOW() ",
@@ -183,7 +169,7 @@ public class Isuda {
 			return null;
 		}
 
-		Connection connection = getConnection(request);
+		Connection connection = DBUtils.getConnection(request);
 		String userId = register(connection, name, password);
 		request.session().attribute("userId", userId);
 
@@ -195,12 +181,12 @@ public class Isuda {
 		//
 		String salt = RandomStringUtils.randomAlphanumeric(20);
 
-		String hash = getSha1Digest(salt + "password");
+		String hash = Utils.getSha1Digest(salt + "password");
 
-		execute(connection, "INSERT INTO user (name, salt, password, created_at) VALUES (?, ?, ?, NOW())", user, salt,
-				hash);
+		DBUtils.execute(connection, "INSERT INTO user (name, salt, password, created_at) VALUES (?, ?, ?, NOW())", user,
+				salt, hash);
 
-		Map<String, Object> selectResult = selectOne(connection, "SELECT LAST_INSERT_ID() AS last_insert_id");
+		Map<String, Object> selectResult = DBUtils.selectOne(connection, "SELECT LAST_INSERT_ID() AS last_insert_id");
 
 		return selectResult.get("last_insert_id").toString();
 	}
@@ -221,11 +207,11 @@ public class Isuda {
 		String name = request.queryParams("name");
 		String password = request.queryParams("password");
 
-		Connection connection = getConnection(request);
-		Map<String, Object> user = selectOne(connection, "SELECT * FROM user WHERE name = ?", name);
+		Connection connection = DBUtils.getConnection(request);
+		Map<String, Object> user = DBUtils.selectOne(connection, "SELECT * FROM user WHERE name = ?", name);
 
 		if (user == null || !StringUtils.equals(user.get("password").toString(),
-				getSha1Digest(user.get("salt").toString() + password))) {
+				Utils.getSha1Digest(user.get("salt").toString() + password))) {
 			halt(403);
 		}
 
@@ -255,8 +241,8 @@ public class Isuda {
 			return "";
 		}
 
-		Connection connection = getConnection(request);
-		Map<String, Object> entry = selectOne(connection, "SELECT * FROM entry WHERE keyword = ?", keyword);
+		Connection connection = DBUtils.getConnection(request);
+		Map<String, Object> entry = DBUtils.selectOne(connection, "SELECT * FROM entry WHERE keyword = ?", keyword);
 
 		if (entry == null) {
 			response.status(404);
@@ -284,15 +270,15 @@ public class Isuda {
 
 		String keyword = request.params("keyword");
 
-		Connection connection = getConnection(request);
-		Map<String, Object> entry = selectOne(connection, "SELECT * FROM entry WHERE keyword = ?", keyword);
+		Connection connection = DBUtils.getConnection(request);
+		Map<String, Object> entry = DBUtils.selectOne(connection, "SELECT * FROM entry WHERE keyword = ?", keyword);
 
 		if (entry == null) {
 			response.status(404);
 			return null;
 		}
 
-		execute(connection, "DELETE FROM entry WHERE keyword = ?", keyword);
+		DBUtils.execute(connection, "DELETE FROM entry WHERE keyword = ?", keyword);
 
 		response.redirect("/");
 		return null;
@@ -312,7 +298,7 @@ public class Isuda {
 		//
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 
-			setParams(statement, params);
+			DBUtils.setParams(statement, params);
 
 			try (ResultSet rs = statement.executeQuery()) {
 
@@ -323,7 +309,7 @@ public class Isuda {
 
 				while (rs.next()) {
 
-					Map<String, Object> item = convertToMap(rs, metaData, columnCount);
+					Map<String, Object> item = DBUtils.convertToMap(rs, metaData, columnCount);
 
 					result.add(item);
 				}
@@ -341,15 +327,15 @@ public class Isuda {
 
 		String result = content;
 
-		Connection connection = getConnection(request);
+		Connection connection = DBUtils.getConnection(request);
 
 		Map<String, String> kw2sha = new HashMap<>();
 
 		List<Map<String, Object>> keywords = select(connection,
 				"SELECT keyword FROM entry ORDER BY CHARACTER_LENGTH(keyword) DESC");
 
-		String regex = String.format("(%s)",
-				keywords.stream().map(k -> Pattern.quote(k.get("keyword").toString())).collect(Collectors.joining("|")));
+		String regex = String.format("(%s)", keywords.stream().map(k -> Pattern.quote(k.get("keyword").toString()))
+				.collect(Collectors.joining("|")));
 
 		Pattern re = Pattern.compile(regex.toString());
 
@@ -359,7 +345,7 @@ public class Isuda {
 		while (m.find()) {
 
 			String k = m.group();
-			String hash = "isuda_" + getSha1Digest(k);
+			String hash = "isuda_" + Utils.getSha1Digest(k);
 
 			m.appendReplacement(sb, hash);
 
@@ -369,12 +355,12 @@ public class Isuda {
 
 		result = sb.toString();
 
-		result = escapeHtml(result);
+		result = Utils.escapeHtml(result);
 
 		for (Map.Entry<String, String> kw : kw2sha.entrySet()) {
 
-			String url = "/keyword/" + urlEncode(kw.getKey());
-			String link = String.format("<a href=\"%s\">%s</a>", url, escapeHtml(kw.getKey()));
+			String url = "/keyword/" + Utils.urlEncode(kw.getKey());
+			String link = String.format("<a href=\"%s\">%s</a>", url, Utils.escapeHtml(kw.getKey()));
 
 			result = result.replace(kw.getValue(), link);
 		}
@@ -387,207 +373,11 @@ public class Isuda {
 
 	private static Object loadStars(String keyword) {
 
-		Map<String, String> result = httpGet(Config.isutarOrigin + "/stars?keyword=" + urlEncode(keyword));
+		Map<String, String> result = Utils.httpGet(Config.isutarOrigin + "/stars?keyword=" + Utils.urlEncode(keyword));
 		Map<String, Object> json = JSON.decode(result.get("body"));
 
 		return (Object) json.get("stars");
 
-	}
-
-	private static Connection getConnection(Request request) {
-
-		if (request.attribute("connection") != null) {
-			return request.attribute("connection");
-		}
-
-		//
-		try {
-			//
-			Class.forName("com.mysql.jdbc.Driver");
-
-			String serverName = Config.host;
-			String port = Config.port;
-			String databaseName = Config.db;
-			String user = Config.user;
-			String password = Config.password;
-
-			String url = "jdbc:mysql://" + serverName + ":" + port + "/" + databaseName
-					+ "?useUnicode=true&characterEncoding=" + Config.charset;
-
-			Connection connection = DriverManager.getConnection(url, user, password);
-			connection.setAutoCommit(false);
-
-			try (Statement statement = connection.createStatement()) {
-				//
-				statement.execute("SET SESSION sql_mode='TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY'");
-				statement.execute("SET NAMES utf8mb4");
-			}
-
-			request.attribute("connection", connection);
-
-			return connection;
-
-		} catch (ClassNotFoundException | SQLException e) {
-			//
-			throw new RuntimeException("SystemException", e);
-		}
-	}
-
-	private static Map<String, Object> selectOne(Connection connection, String sql, Object... params)
-			throws SQLException {
-
-		try (PreparedStatement statement = connection.prepareStatement(sql)) {
-
-			setParams(statement, params);
-
-			try (ResultSet rs = statement.executeQuery()) {
-
-				ResultSetMetaData metaData = rs.getMetaData();
-				int columnCount = metaData.getColumnCount();
-
-				if (rs.next()) {
-
-					Map<String, Object> item = convertToMap(rs, metaData, columnCount);
-					return item;
-
-				} else {
-					return null;
-				}
-			}
-		}
-	}
-
-	private static int count(Connection connection, String sql, Object... params) throws SQLException {
-
-		try (PreparedStatement statement = connection.prepareStatement(sql)) {
-
-			setParams(statement, params);
-
-			try (ResultSet rs = statement.executeQuery()) {
-				rs.next();
-				return rs.getInt(1);
-			}
-		}
-	}
-
-	private static int execute(Connection connection, String sql) throws SQLException {
-		//
-		return execute(connection, sql, new Object[0]);
-	}
-
-	private static int execute(Connection connection, String sql, Object... params) throws SQLException {
-		//
-		try (PreparedStatement statement = connection.prepareStatement(sql)) {
-
-			setParams(statement, params);
-
-			return statement.executeUpdate();
-		}
-	}
-
-	private static void setParams(PreparedStatement statement, Object... params) throws SQLException {
-		//
-		for (int i = 0; i < params.length; i++) {
-			if (params[i] instanceof Integer || params[i].getClass() == int.class) {
-				statement.setInt(i + 1, (Integer) params[i]);
-			} else if (params[i] instanceof BigInteger) {
-				statement.setInt(i + 1, ((BigInteger) params[i]).intValue());
-			} else {
-				statement.setString(i + 1, (String) params[i]);
-			}
-		}
-	}
-
-	private static Map<String, Object> convertToMap(ResultSet rs, ResultSetMetaData metaData, int columnCount)
-			throws SQLException {
-		Map<String, Object> item = new HashMap<>();
-
-		for (int i = 0; i < columnCount; i++) {
-			item.put(metaData.getColumnName(i + 1), rs.getObject(i + 1));
-		}
-		return item;
-	}
-
-	private static Map<String, String> httpGet(String urlString) {
-
-		Map<String, String> result = new HashMap<>();
-
-		HttpURLConnection con = null;
-
-		try {
-
-			URL url = new URL(urlString);
-
-			con = (HttpURLConnection) url.openConnection();
-			con.setRequestMethod("GET");
-
-			result.put("status", String.valueOf(con.getResponseCode()));
-			if (con.getResponseCode() != HttpURLConnection.HTTP_OK) {
-				//
-				return result;
-			}
-
-			try (BufferedReader reader = new BufferedReader(new InputStreamReader(con.getInputStream(), "UTF-8"))) {
-
-				StringBuilder body = new StringBuilder();
-				while (reader.ready()) {
-					body.append(reader.readLine());
-				}
-
-				result.put("body", body.toString());
-
-				return result;
-			}
-
-		} catch (IOException e) {
-			throw new RuntimeException("SystemException", e);
-		}
-	}
-
-	private static Map<String, String> httpPost(String urlString, String data) {
-
-		Map<String, String> result = new HashMap<>();
-
-		HttpURLConnection connection = null;
-		try {
-
-			URL url = new URL(urlString);
-			connection = (HttpURLConnection) url.openConnection();
-			connection.setDoOutput(true);
-			connection.setRequestMethod("POST");
-
-			try (OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream())) {
-				out.write(data);
-				out.flush();
-			}
-
-			result.put("status", String.valueOf(connection.getResponseCode()));
-			if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-				//
-				return result;
-			}
-
-			try (InputStream in = connection.getInputStream()) {
-
-				StringBuilder content = new StringBuilder();
-				try (BufferedReader input = new BufferedReader(new InputStreamReader(in))) {
-					String line = null;
-					while ((line = input.readLine()) != null) {
-						content.append(line);
-					}
-				}
-
-				result.put("content", content.toString());
-				return result;
-			}
-
-		} catch (Exception e) {
-			throw new RuntimeException("SystemExeption", e);
-		} finally {
-			if (connection != null) {
-				connection.disconnect();
-			}
-		}
 	}
 
 	private static String render(Map<String, Object> model, String path) {
@@ -604,18 +394,9 @@ public class Isuda {
 		return freeMarkerEngine;
 	}
 
-	private static String hexDigest(byte[] bytes) {
-		StringBuilder sb = new StringBuilder();
-		for (byte b : bytes) {
-			String hex = String.format("%02x", b);
-			sb.append(hex);
-		}
-		return sb.toString();
-	}
-
 	private static boolean isSpamContents(String target) {
 
-		Map<String, String> httpResult = httpPost(Config.isupamOrigin, "content=" + urlEncode(target));
+		Map<String, String> httpResult = Utils.httpPost(Config.isupamOrigin, "content=" + Utils.urlEncode(target));
 		String content = httpResult.get("content");
 
 		Map<String, Boolean> result = JSON.decode(content);
@@ -629,7 +410,7 @@ public class Isuda {
 
 	private static void setName(Request request) throws SQLException {
 		//
-		Connection connection = getConnection(request);
+		Connection connection = DBUtils.getConnection(request);
 
 		Object userId = request.session().attribute("userId");
 
@@ -637,7 +418,7 @@ public class Isuda {
 
 			request.attribute("userId", userId);
 
-			Map<String, Object> user = selectOne(connection, "SELECT name FROM user WHERE id = ?", userId);
+			Map<String, Object> user = DBUtils.selectOne(connection, "SELECT name FROM user WHERE id = ?", userId);
 
 			if (user == null) {
 				halt(403);
@@ -646,38 +427,6 @@ public class Isuda {
 			request.attribute("userName", user.get("name"));
 		} else {
 			request.attribute("userName", "");
-		}
-	}
-
-	private static String getSha1Digest(String item) {
-
-		try {
-
-			MessageDigest md = MessageDigest.getInstance("SHA-1");
-			byte[] digest = md.digest(item.getBytes());
-			return hexDigest(digest);
-
-		} catch (NoSuchAlgorithmException e) {
-			//
-			throw new RuntimeException("SystemException", e);
-		}
-	}
-
-	private static String escapeHtml(String value) {
-		return value.replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;").replace(">", "&gt;")
-				.replace("'", "&#x27;");
-	}
-
-	private static String urlEncode(String value) {
-
-		try {
-			String result = URLEncoder.encode(value, "UTF-8");
-			result = result.replace("+", "%20");
-
-			return result;
-
-		} catch (Exception e) {
-			throw new RuntimeException("SystemException", e);
 		}
 	}
 }
