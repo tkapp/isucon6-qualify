@@ -1,4 +1,4 @@
-<#include "/templates/header.ftl">
+<#include "/header.ftl">
 
 <form class="form" action="/keyword" method="POST">
   <ul>
@@ -10,7 +10,7 @@
 
 <#list entries as entry>
 
-  <#include "/templates/widget/keyword.ftl">
+  <#include "/widget/keyword.ftl">
 
 </#list>
 
@@ -31,4 +31,4 @@
   </ul>
 </nav>
 
-<#include "/templates/footer.ftl">
+<#include "/footer.ftl">

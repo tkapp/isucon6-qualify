@@ -125,7 +125,7 @@ public class Isuda {
 		model.put("lastPage", lastPage);
 		model.put("userName", request.attribute("userName"));
 
-		return render(model, "templates/index.ftl");
+		return render(model, "/index.ftl");
 	};
 
 	public static Route getRobotTxt = (request, response) -> {
@@ -213,7 +213,7 @@ public class Isuda {
 		model.put("action", "login");
 		model.put("userName", request.attribute("userName"));
 
-		return render(model, "templates/authenticate.ftl");
+		return render(model, "/authenticate.ftl");
 	};
 
 	public static Route postLogin = (request, response) -> {
@@ -270,7 +270,7 @@ public class Isuda {
 		model.put("entry", entry);
 		model.put("userName", request.attribute("userName"));
 
-		return render(model, "templates/keyword.ftl");
+		return render(model, "/keyword.ftl");
 	};
 
 	public static Route deleteKeyword = (request, response) -> {
@@ -596,17 +596,12 @@ public class Isuda {
 
 	private static FreeMarkerEngine getTemplateEngine() {
 
-		try {
-			Configuration freeMarkerConfiguration = new Configuration(Configuration.VERSION_2_3_26);
-			freeMarkerConfiguration.setDirectoryForTemplateLoading(new File("./"));
-			freeMarkerConfiguration.setDefaultEncoding("UTF-8");
-			FreeMarkerEngine freeMarkerEngine = new FreeMarkerEngine(freeMarkerConfiguration);
+		Configuration freeMarkerConfiguration = new Configuration(Configuration.VERSION_2_3_26);
+		freeMarkerConfiguration.setClassForTemplateLoading(Isuda.class, "/templates");
+		freeMarkerConfiguration.setDefaultEncoding("UTF-8");
+		FreeMarkerEngine freeMarkerEngine = new FreeMarkerEngine(freeMarkerConfiguration);
 
-			return freeMarkerEngine;
-		} catch (IOException e) {
-			//
-			throw new RuntimeException("SystemException", e);
-		}
+		return freeMarkerEngine;
 	}
 
 	private static String hexDigest(byte[] bytes) {

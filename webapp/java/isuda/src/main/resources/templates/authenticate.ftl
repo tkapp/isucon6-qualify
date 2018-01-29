@@ -1,4 +1,4 @@
-<#include "/templates/header.ftl">
+<#include "/header.ftl">
 
 <h2>${action?capitalize}</h2>
 <form class="form" action="/${action}" method="POST">
@@ -8,4 +8,4 @@
 </form>
 
 
-<#include "/templates/footer.ftl">
+<#include "/footer.ftl">

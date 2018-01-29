@@ -1,5 +1,5 @@
-<#include "/templates/header.ftl">
+<#include "/header.ftl">
 
-<#include "/templates/widget/keyword.ftl">
+<#include "/widget/keyword.ftl">
 
-<#include "/templates/footer.ftl">
+<#include "/footer.ftl">
