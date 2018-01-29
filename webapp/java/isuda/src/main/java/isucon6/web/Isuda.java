@@ -145,7 +145,7 @@ public class Isuda {
 
 		Cache.addKeyword(keyword);
 
-		System.out.println("create -> " + keyword);
+//		System.out.println("create -> " + keyword);
 
 		response.redirect("/");
 		return null;
@@ -236,7 +236,7 @@ public class Isuda {
 	public static Route getKeyword = (request, response) -> {
 
 		String keyword = request.params("keyword");
-		System.out.println("get -> " + keyword);
+//		System.out.println("get -> " + keyword);
 
 		setName(request);
 
@@ -293,7 +293,7 @@ public class Isuda {
 
 	public static Route getStars = (request, response) -> {
 
-		Map<String, Object> result = getStars(request.queryParams("keyword"), request);
+		Map<String, List<Map<String, Object>>> result = getStars(request.queryParams("keyword"), request);
 
 		response.type("text/json");
 		return JSON.encode(result);
@@ -321,6 +321,8 @@ public class Isuda {
 
 		DBUtils.execute(connection, "INSERT INTO isutar.star (keyword, user_name, created_at) VALUES (?, ?, NOW())",
 				keyword, user);
+
+		Cache.addStar(keyword, user);
 
 		response.type("text/json");
 		return "{result: \"ok\"}";
@@ -371,7 +373,7 @@ public class Isuda {
 
 	private static Object loadStars(String keyword, Request request) throws SQLException {
 
-		Map<String, Object> stars = getStars(keyword, request);
+		Map<String, List<Map<String, Object>>> stars = getStars(keyword, request);
 
 		return (Object) stars.get("stars");
 
@@ -431,17 +433,23 @@ public class Isuda {
 		return DBUtils.selectOne(connection, "SELECT * FROM entry WHERE keyword = ?", keyword);
 	}
 
-	private static Map<String, Object> getStars(String keyword, Request request) throws SQLException {
+	private static Map<String, List<Map<String, Object>>> getStars(String keyword, Request request)
+			throws SQLException {
 
+		Map<String, List<Map<String, Object>>> stars = Cache.getStars(keyword);
 
-		Connection connection = DBUtils.getConnection(request);
+		if (stars == null) {
+			Connection connection = DBUtils.getConnection(request);
 
-		List<Map<String, Object>> stars = DBUtils.select(connection, "SELECT * FROM isutar.star WHERE keyword = ?",
-				keyword);
+			List<Map<String, Object>> sqlResult = DBUtils.select(connection,
+					"SELECT * FROM isutar.star WHERE keyword = ?", keyword);
 
-		Map<String, Object> result = new HashMap<>();
-		result.put("stars", stars);
+			stars = new HashMap<>();
+			stars.put("stars", sqlResult);
 
-		return result;
+			Cache.setStars(keyword, stars);
+		}
+
+		return stars;
 	}
 }

@@ -15,6 +15,8 @@ public class Cache {
 
 	private static Map<String, String> contents = new HashMap<>();
 
+	private static Map<String, Map<String, List<Map<String, Object>>>> stars = new HashMap<>();
+
 	public static void init(Connection connection) throws SQLException {
 
 		List<Map<String, Object>> entries = DBUtils.select(connection,
@@ -25,6 +27,8 @@ public class Cache {
 		}
 
 		contents = new HashMap<>();
+
+		stars = new HashMap<>();
 	}
 
 	public static boolean addKeyword(String keyword) {
@@ -52,7 +56,6 @@ public class Cache {
 		e.setKeyword(keyword);
 		entries.put(keyword, e);
 
-
 		contents = new HashMap<>();
 
 		return true;
@@ -74,5 +77,37 @@ public class Cache {
 
 	public static void setContent(String keyword, String content) {
 		contents.put(keyword, content);
+	}
+
+	public static Map<String, List<Map<String, Object>> > getStars(String keyword) {
+		return stars.get(keyword);
+	}
+
+	public static void addStar(String keyword, String userName) {
+
+		Map<String, List<Map<String, Object>> > stars = getStars(keyword);
+
+		if (stars == null) {
+			stars = new HashMap<>();
+		}
+
+		List<Map<String, Object>> starList = stars.get("stars");
+		if (starList == null) {
+			starList = new ArrayList<>();
+		}
+
+		Map<String, Object> s = new HashMap<>();
+		s.put("keyword", keyword);
+		s.put("user_name", userName);
+
+		starList.add(s);
+
+		stars.put("stars", starList);
+
+		Cache.stars.put(keyword, stars);
+	}
+
+	public static void setStars(String keyword, Map<String, List<Map<String, Object>>> stars) {
+		Cache.stars.put(keyword, stars);
 	}
 }
