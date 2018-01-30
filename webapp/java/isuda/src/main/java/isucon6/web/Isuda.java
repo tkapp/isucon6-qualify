@@ -91,12 +91,12 @@ public class Isuda {
 		int page = (request.queryParams("page") == null) ? 1 : Integer.parseInt(request.queryParams("page"));
 
 		Connection connection = DBUtils.getConnection(request);
-		List<Map<String, Object>> entries = DBUtils.select(connection,
-				"SELECT * FROM entry ORDER BY updated_at DESC LIMIT ? OFFSET ?", PER_PAGE, (page - 1) * PER_PAGE);
+		List<Entry> entries = DBUtils.select(connection,
+				"SELECT * FROM entry ORDER BY updated_at DESC LIMIT ? OFFSET ?", Entry::create, PER_PAGE, (page - 1) * PER_PAGE);
 
-		for (Map<String, Object> entry : entries) {
-			entry.put("html", htmlify(entry.get("keyword").toString(), entry.get("description").toString(), request));
-			entry.put("stars", loadStars(entry.get("keyword").toString(), request));
+		for (Entry entry : entries) {
+			entry.html = htmlify(entry.keyword, entry.description, request);
+			entry.stars= loadStars(entry.keyword, request);
 		}
 
 		int totalEntries = DBUtils.count(connection, "SELECT COUNT(*) AS count FROM entry");
@@ -145,8 +145,6 @@ public class Isuda {
 				userId, keyword, description, userId, keyword, description);
 
 		Cache.addKeyword(keyword);
-
-//		System.out.println("create -> " + keyword);
 
 		connection.commit();
 
@@ -241,7 +239,6 @@ public class Isuda {
 	public static Route getKeyword = (request, response) -> {
 
 		String keyword = request.params("keyword");
-//		System.out.println("get -> " + keyword);
 
 		setName(request);
 
@@ -251,7 +248,7 @@ public class Isuda {
 		}
 
 		Connection connection = DBUtils.getConnection(request);
-		Map<String, Object> entry = getKeyword(keyword, connection);
+		Entry entry = getKeyword(keyword, connection);
 
 		if (entry == null) {
 			System.out.println("get 404 -> " + keyword);
@@ -259,8 +256,8 @@ public class Isuda {
 			return "";
 		}
 
-		entry.put("html", htmlify(entry.get("keyword").toString(), entry.get("description").toString(), request));
-		entry.put("stars", loadStars(entry.get("keyword").toString(), request));
+		entry.html = htmlify(entry.keyword, entry.description, request);
+		entry.stars = loadStars(entry.keyword, request);
 
 		Map<String, Object> model = new HashMap<>();
 		model.put("entry", entry);
@@ -316,8 +313,8 @@ public class Isuda {
 			keyword = request.params("keyword");
 		}
 
-		Map<String, Object> result = getKeyword(keyword, connection);
-		if (result == null) {
+		Entry entry = getKeyword(keyword, connection);
+		if (entry == null) {
 			halt(404);
 		}
 
@@ -386,11 +383,11 @@ public class Isuda {
 
 	}
 
-	private static Object loadStars(String keyword, Request request) throws SQLException {
+	private static List<Map<String, Object>> loadStars(String keyword, Request request) throws SQLException {
 
 		Map<String, List<Map<String, Object>>> stars = getStars(keyword, request);
 
-		return (Object) stars.get("stars");
+		return stars.get("stars");
 
 	}
 
@@ -444,8 +441,8 @@ public class Isuda {
 		}
 	}
 
-	private static Map<String, Object> getKeyword(String keyword, Connection connection) throws SQLException {
-		return DBUtils.selectOne(connection, "SELECT * FROM entry WHERE keyword = ?", keyword);
+	private static Entry getKeyword(String keyword, Connection connection) throws SQLException {
+		return DBUtils.selectOne(connection, "SELECT * FROM entry WHERE keyword = ?", Entry::create, keyword);
 	}
 
 	private static Map<String, List<Map<String, Object>>> getStars(String keyword, Request request)

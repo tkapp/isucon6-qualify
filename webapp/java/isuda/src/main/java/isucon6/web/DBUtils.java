@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -137,6 +138,26 @@ public class DBUtils {
 		}
 	}
 
+	public static <T> List<T> select(Connection connection, String sql, Function<ResultSet, T> factory, Object... params)
+			throws SQLException {
+
+		try (PreparedStatement statement = connection.prepareStatement(sql)) {
+
+			DBUtils.setParams(statement, params);
+
+			try (ResultSet rs = statement.executeQuery()) {
+
+				List<T> result = new ArrayList<>();
+
+				while (rs.next()) {
+					result.add(factory.apply(rs));
+				}
+
+				return result;
+			}
+		}
+	}
+
 	public static Map<String, Object> selectOne(Connection connection, String sql, Object... params)
 			throws SQLException {
 
@@ -153,6 +174,26 @@ public class DBUtils {
 
 					Map<String, Object> item = convertToMap(rs, metaData, columnCount);
 					return item;
+
+				} else {
+					return null;
+				}
+			}
+		}
+	}
+
+	public static <T> T selectOne(Connection connection, String sql, Function<ResultSet, T> factory, Object... params)
+			throws SQLException {
+
+		try (PreparedStatement statement = connection.prepareStatement(sql)) {
+
+			setParams(statement, params);
+
+			try (ResultSet rs = statement.executeQuery()) {
+
+				if (rs.next()) {
+
+					return factory.apply(rs);
 
 				} else {
 					return null;
