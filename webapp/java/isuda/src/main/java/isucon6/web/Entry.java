@@ -3,7 +3,6 @@ package isucon6.web;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
 
 public class Entry {
 
@@ -30,7 +29,7 @@ public class Entry {
 
 	public String html;
 
-	public List<Map<String, Object>> stars;
+	public List<Star> stars;
 
 	public String getHash() {
 		return hash;
@@ -64,11 +63,11 @@ public class Entry {
 		this.html = html;
 	}
 
-	public List<Map<String, Object>> getStars() {
+	public List<Star> getStars() {
 		return stars;
 	}
 
-	public void setStars(List<Map<String, Object>> stars) {
+	public void setStars(List<Star> stars) {
 		this.stars = stars;
 	}
 

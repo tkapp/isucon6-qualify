@@ -92,11 +92,12 @@ public class Isuda {
 
 		Connection connection = DBUtils.getConnection(request);
 		List<Entry> entries = DBUtils.select(connection,
-				"SELECT * FROM entry ORDER BY updated_at DESC LIMIT ? OFFSET ?", Entry::create, PER_PAGE, (page - 1) * PER_PAGE);
+				"SELECT * FROM entry ORDER BY updated_at DESC LIMIT ? OFFSET ?", Entry::create, PER_PAGE,
+				(page - 1) * PER_PAGE);
 
 		for (Entry entry : entries) {
 			entry.html = htmlify(entry.keyword, entry.description, request);
-			entry.stars= loadStars(entry.keyword, request);
+			entry.stars = loadStars(entry.keyword, request);
 		}
 
 		int totalEntries = DBUtils.count(connection, "SELECT COUNT(*) AS count FROM entry");
@@ -297,7 +298,10 @@ public class Isuda {
 
 	public static Route getStars = (request, response) -> {
 
-		Map<String, List<Map<String, Object>>> result = getStars(request.queryParams("keyword"), request);
+		List<Star> stars = getStars(request.queryParams("keyword"), request);
+		Map<String, List<Star>> result = new HashMap<>();
+		result.put("stars", stars);
+
 
 		response.type("text/json");
 		return JSON.encode(result);
@@ -383,11 +387,11 @@ public class Isuda {
 
 	}
 
-	private static List<Map<String, Object>> loadStars(String keyword, Request request) throws SQLException {
+	private static List<Star> loadStars(String keyword, Request request) throws SQLException {
 
-		Map<String, List<Map<String, Object>>> stars = getStars(keyword, request);
+		List<Star> stars = getStars(keyword, request);
 
-		return stars.get("stars");
+		return stars;
 
 	}
 
@@ -445,19 +449,14 @@ public class Isuda {
 		return DBUtils.selectOne(connection, "SELECT * FROM entry WHERE keyword = ?", Entry::create, keyword);
 	}
 
-	private static Map<String, List<Map<String, Object>>> getStars(String keyword, Request request)
-			throws SQLException {
+	private static List<Star> getStars(String keyword, Request request) throws SQLException {
 
-		Map<String, List<Map<String, Object>>> stars = Cache.getStars(keyword);
+		List<Star> stars = Cache.getStars(keyword);
 
 		if (stars == null) {
 			Connection connection = DBUtils.getConnection(request);
 
-			List<Map<String, Object>> sqlResult = DBUtils.select(connection,
-					"SELECT * FROM isutar.star WHERE keyword = ?", keyword);
-
-			stars = new HashMap<>();
-			stars.put("stars", sqlResult);
+			stars = DBUtils.select(connection, "SELECT * FROM isutar.star WHERE keyword = ?", Star::create, keyword);
 
 			Cache.setStars(keyword, stars);
 		}

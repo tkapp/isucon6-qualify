@@ -15,7 +15,7 @@ public class Cache {
 
 	private static Map<String, String> contents = new HashMap<>();
 
-	private static Map<String, Map<String, List<Map<String, Object>>>> stars = new HashMap<>();
+	private static Map<String, List<Star>> stars = new HashMap<>();
 
 	public static void init(Connection connection) throws SQLException {
 
@@ -83,35 +83,29 @@ public class Cache {
 		contents.put(keyword, content);
 	}
 
-	public static Map<String, List<Map<String, Object>> > getStars(String keyword) {
+	public static List<Star> getStars(String keyword) {
 		return stars.get(keyword);
 	}
 
 	public static void addStar(String keyword, String userName) {
 
-		Map<String, List<Map<String, Object>> > stars = getStars(keyword);
+		List<Star> stars = getStars(keyword);
 
 		if (stars == null) {
-			stars = new HashMap<>();
+			stars = new ArrayList<>();
 		}
 
-		List<Map<String, Object>> starList = stars.get("stars");
-		if (starList == null) {
-			starList = new ArrayList<>();
-		}
+		Star star = new Star();
+		star.setKeyword(keyword);
+		star.setUser_name(userName);
 
-		Map<String, Object> s = new HashMap<>();
-		s.put("keyword", keyword);
-		s.put("user_name", userName);
+		stars.add(star);
 
-		starList.add(s);
-
-		stars.put("stars", starList);
 
 		Cache.stars.put(keyword, stars);
 	}
 
-	public static void setStars(String keyword, Map<String, List<Map<String, Object>>> stars) {
+	public static void setStars(String keyword, List<Star> stars) {
 		Cache.stars.put(keyword, stars);
 	}
 }
