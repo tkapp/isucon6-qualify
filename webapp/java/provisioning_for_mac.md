@@ -1,17 +1,19 @@
 
 ## 環境構築
 
-1. homebrewのインストール
+1. homebrewとcaskのインストール
 
 ````
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+brew install caskroom/cask/brew-cask
 ````
 
 2. vagrant と virtualboxインストール
 
 ````
 brew cask install virtualbox
-brew cask install virtualbox
+brew cask install vagrant
+brew cask install vagrant-manager
 ````
 
 
