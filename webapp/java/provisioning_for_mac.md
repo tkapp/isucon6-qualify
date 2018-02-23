@@ -26,7 +26,7 @@ mv ~/work
 3.2 構築用Vagrantファイルの取得
 
 ````
-curl -O https://raw.githubusercontent.com/matsuu/vagrant-isucon/master/isucon6-qualifier/Vagrantfile
+curl -O https://raw.githubusercontent.com/matsuu/vagrant-isucon/master/isucon6-qualifier-standalone/Vagrantfile
 ````
 
 
