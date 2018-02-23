@@ -45,15 +45,17 @@ vagrant up
 
 teraterm、puttyなどのクライアントツールで、VMにログインします。
 
+```
 host名： localhost
 port: 2022
 user: ubuntu
 password: C:/Users/{{ user }}/.vagrant.d/boxes/ubuntu-VAGRANTSLASH-xenial64/20170501.0.0/virtualbox/Vagrantfile の中に書いてあります。
-
+```
 
 7. Javaソースのダウンロードと初期設定
 
 ````
+cd /vagrant
 git clone https://github.com/tkapp/isucon6-qualify.git
 sudo ln -s /vagrant/isucon6-qualify/webapp/java /home/isucon/webapp
 sudo chmod 755 /home/isucon/webapp/java/*sh
