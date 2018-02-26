@@ -59,7 +59,8 @@ cd /vagrant
 git clone https://github.com/tkapp/isucon6-qualify.git
 sudo ln -s /vagrant/isucon6-qualify/webapp/java /home/isucon/webapp
 sudo chmod 755 /home/isucon/webapp/java/*sh
-sudo /home/isucon/webapp/java/deploy.sh
+cd /home/isucon/webapp/java/
+sudo ./deploy.sh
 ````
 
 
